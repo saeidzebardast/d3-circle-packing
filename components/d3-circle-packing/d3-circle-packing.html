@@ -1,0 +1,192 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="d3-import.html">
+
+<!--
+`d3-circle-packing`
+An element to draw a d3 circle packing chart
+
+@demo demo/index.html
+-->
+
+<dom-module id="d3-circle-packing">
+  <template>
+    <div style$='width: [[width]]px; height: [[height]]px'></div>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'd3-circle-packing',
+
+      properties: {
+        /**
+         * Width of the chart.
+         */
+        width: {
+          type: Number,
+          value: 500
+        },
+
+        /**
+         * Height of the chart.
+         */
+        height: {
+          type: Number,
+          value: 500
+        },
+
+        /**
+         * Margin of svg
+         */
+        margin: {
+          type: Number,
+          value: 10
+        },
+
+        /**
+         * Data object for drawing the chart.
+         */
+        data: {
+          type: Object
+        }
+      },
+
+      /**
+       * Draw svg of circle packing chart.
+       */
+      draw: function () {
+        var thiz = this;
+        var container = Polymer.dom(thiz.root).querySelector('div');
+
+        var color = d3.scale.linear()
+          .domain([-1, 5])
+          .range(['hsl(152,80%,80%)', 'hsl(228,30%,40%)'])
+          .interpolate(d3.interpolateHcl);
+
+        var pack = d3.layout.pack()
+          .padding(2)
+          .size([this.width - this.margin, this.height - this.margin])
+          .value(function (d) {
+            return d.size;
+          });
+
+        var svg = d3.select(container).append('svg')
+          .attr('width', this.width)
+          .attr('height', this.height)
+          .append('g')
+          .attr('transform', 'translate(' + this.width / 2 + ',' + this.height / 2 + ')');
+
+        var root = this.data;
+
+        if (!root) {
+          return;
+        }
+
+        var focus = root,
+          nodes = pack.nodes(root),
+          view;
+
+        var circle = svg.selectAll('circle')
+          .data(nodes)
+          .enter().append('circle')
+          .style('cursor', 'pointer')
+          .style('fill', function (d) {
+            if (d.parent) {
+              if (d.children) {
+                return color(d.depth);
+              } else {
+                return 'white';
+              }
+            } else {
+              return 'none';
+            }
+          })
+          .style('pointer-events', function (d) {
+            if (d.parent && !d.children) {
+              return 'none';
+            } else {
+              return null;
+            }
+          })
+          .on('click', function (d) {
+            if (focus !== d) {
+              zoom(d);
+              d3.event.stopPropagation();
+            }
+          });
+
+        var text = svg.selectAll('text')
+          .data(nodes)
+          .enter().append('text')
+          .style({
+            font: '11px "Helvetica Neue", Helvetica, Arial, sans-serif',
+            'text-anchor': 'middle',
+            'text-shadow': '0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 -1px 0 #fff'
+          })
+          .style('fill-opacity', function (d) {
+            return d.parent === root ? 1 : 0;
+          })
+          .style('display', function (d) {
+            return d.parent === root ? 'inline' : 'none';
+          })
+          .text(function (d) {
+            return d.name;
+          });
+
+        var node = svg.selectAll('circle,text');
+
+        d3.select(container)
+          .on('click', function () {
+            zoom(root);
+          });
+
+        zoomTo([root.x, root.y, root.r * 2 + this.margin]);
+
+        function zoom(d) {
+          var focus = d;
+
+          var transition = d3.transition()
+            .duration(d3.event.altKey ? 7500 : 750)
+            .tween('zoom', function () {
+              var i = d3.interpolateZoom(view, [focus.x, focus.y, focus.r * 2 + thiz.margin]);
+              return function (t) {
+                zoomTo(i(t));
+              };
+            });
+
+          svg.selectAll('text')
+            .transition(transition)
+            .filter(function (d) {
+              return d.parent === focus || this.style.display === 'inline';
+            })
+            .style('fill-opacity', function (d) {
+              return d.parent === focus ? 1 : 0;
+            })
+            .each('start', function (d) {
+              if (d.parent === focus) this.style.display = 'inline';
+            })
+            .each('end', function (d) {
+              if (d.parent !== focus) this.style.display = 'none';
+            });
+        }
+
+        function zoomTo(v) {
+          var k = thiz.width / v[2];
+          view = v;
+          node.attr('transform', function (d) {
+            return 'translate(' + (d.x - v[0]) * k + ',' + (d.y - v[1]) * k + ')';
+          });
+          circle.attr('r', function (d) {
+            return d.r * k;
+          });
+        }
+
+        d3.select(self.frameElement).style('height', this.height + 'px');
+      },
+
+      attached: function () {
+        this.draw();
+      }
+    });
+  </script>
+</dom-module>
