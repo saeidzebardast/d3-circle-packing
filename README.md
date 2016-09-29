@@ -1,5 +1,5 @@
 # &lt;d3-circle-packing&gt; [![Build Status](https://travis-ci.org/saeidzebardast/d3-circle-packing.svg?branch=master)](https://travis-ci.org/saeidzebardast/d3-circle-packing)
-circle-packing chart element for [Polymer](https://www.polymer-project.org) using [d3](http://d3js.org).
+A circle packing chart element for [Polymer](https://www.polymer-project.org) using [d3](http://d3js.org).
 
 ![d3-circle-packing demo](https://raw.githubusercontent.com/saeidzebardast/d3-circle-packing/master/demo/demo.png "d3-circle-packing")
 
